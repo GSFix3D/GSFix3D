@@ -191,12 +191,14 @@ Here we only provide a simple script to simplify the process of novel view selec
 
 If you find our work useful, please cite us:
 ```bibtex
-@article{wei2026gsfix3d,
-  title={GSFix3D: Diffusion-Guided Repair of Novel Views in Gaussian Splatting}, 
-  author={Wei, Jiaxin and Leutenegger, Stefan and Schaefer, Simon},
-  booktitle={2026 International Conference on 3D Vision (3DV)},
-  year={2026},
-  organization={IEEE}
+@article{gsfix3d,
+         title={GSFix3D: Diffusion-Guided Repair of Novel Views in Gaussian Splatting}, 
+         author={Jiaxin Wei and Stefan Leutenegger and Simon Schaefer},
+         year={2025},
+         eprint={2508.14717},
+         archivePrefix={arXiv},
+         primaryClass={cs.CV},
+         url={https://arxiv.org/abs/2508.14717},
 }
 ```
 
