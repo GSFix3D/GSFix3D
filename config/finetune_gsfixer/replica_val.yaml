@@ -1,0 +1,9 @@
+dataset:
+  val:
+    name: replica
+    disp_name: replica_val
+    dir: room1/finetune
+    dual_input: true
+    resize_to_hw:
+    - 480
+    - 640

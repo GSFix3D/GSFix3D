@@ -1,0 +1,20 @@
+dataset:
+  train:
+    name: mixed
+    prob_ls: [0.9, 0.1]
+    dataset_list:
+    - name: hypersim_gsfixer
+      disp_name: hypersim_gsfixer_train
+      dir: train
+      dual_input: true
+      filename_ls_path: data_split/hypersim_gsfixer/filename_list_train_filtered.txt
+      resize_to_hw:
+      - 480
+      - 640
+    - name: vkitti_gsfixer
+      disp_name: vkitti_gsfixer_train
+      dir: vkitti
+      dual_input: true
+      filename_ls_path: data_split/vkitti_gsfixer/vkitti_train.txt
+      kitti_bm_crop: true
+      valid_mask_crop: null

@@ -1,0 +1,10 @@
+dataset:
+  vis:
+    name: hypersim_gsfixer
+    disp_name: hypersim_gsfixer_vis
+    dir: val
+    dual_input: true
+    filename_ls_path: data_split/hypersim_gsfixer/selected_vis_sample.txt
+    resize_to_hw:
+    - 480
+    - 640

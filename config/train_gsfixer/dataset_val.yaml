@@ -1,0 +1,12 @@
+dataset:
+  val:
+  # Smaller subsets for faster validation during training
+  # The first dataset is used to calculate main eval metric.
+    name: hypersim_gsfixer
+    disp_name: hypersim_gsfixer_val_small
+    dir: val
+    dual_input: true
+    filename_ls_path: data_split/hypersim_gsfixer/filename_list_val_filtered_small.txt
+    resize_to_hw:
+    - 480
+    - 640
