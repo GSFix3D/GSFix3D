@@ -70,7 +70,7 @@ python scripts/gsfixer/train.py --config config/train_gsfixer.yaml --output_dir 
 Note that only `UNet` and `scheduler` will be saved in the `--output_dir`. You need to reuse other model components from the pretrained checkpoint in `BASE_CKPT_DIR`.
 
 ### Fine-tuning on captured data
-Now you can fine-tune the base GSFixer model on any captured data. First, you need to organize the captured data as follows (here we take the `room1` scene from the Replica dataset for example). Specifically, you need to put rendered images from the 3DGS model and (optionally) mesh, as well as the captured ground truth RGB images, under a `finetune` folder to construct data pairs for fine-tuning. Please refer to [here](https://github.com/ethz-mrl/GSFusion#download-datasets) for downloading the Replica and ScanNet++ datasets. We also provide the rendered images from [GSFusion](https://github.com/ethz-mrl/GSFusion), [SplaTAM](https://github.com/spla-tam/SplaTAM) and [RTG-SLAM](https://github.com/MisEty/RTG-SLAM) for Replica and ScanNet++ datasets, which can be downloaded [here](https://drive.google.com/drive/folders/1bpOWQAcSH-jv9geZCsWyC8TdwM4gYLGJ?usp=sharing). Note that `novel_views` and `novel_views.json` are the novel view data we created for quantitative evaluation on the Replica dataset. Please refer to our paper for more details on the novel view selection process.
+Now you can fine-tune the base GSFixer model on any captured data. First, you need to organize the captured data as follows (here we take the `room1` scene from the Replica dataset for example). Specifically, you need to put rendered images from the 3DGS model and (optionally) mesh, as well as the captured ground truth RGB images, under a `finetune` folder to construct data pairs for fine-tuning. Please refer to [here](https://github.com/ethz-mrl/GSFusion#download-datasets) for downloading the Replica and ScanNet++ datasets. We also provide the rendered images from [GSFusion](https://github.com/ethz-mrl/GSFusion), [SplaTAM](https://github.com/spla-tam/SplaTAM) and [RTG-SLAM](https://github.com/MisEty/RTG-SLAM) for Replica and ScanNet++ datasets, which can be downloaded [here](https://nextcloud.cit.tum.de/index.php/s/pMdMZdRZE3o7Tan). Note that `novel_views` and `novel_views.json` are the novel view data we created for quantitative evaluation on the Replica dataset. Please refer to our paper for more details on the novel view selection process.
 ```
 Replica
 ├── cam_params.json
@@ -191,14 +191,13 @@ Here we only provide a simple script to simplify the process of novel view selec
 
 If you find our work useful, please cite us:
 ```bibtex
-@article{gsfix3d,
-         title={GSFix3D: Diffusion-Guided Repair of Novel Views in Gaussian Splatting}, 
-         author={Jiaxin Wei and Stefan Leutenegger and Simon Schaefer},
-         year={2025},
-         eprint={2508.14717},
-         archivePrefix={arXiv},
-         primaryClass={cs.CV},
-         url={https://arxiv.org/abs/2508.14717},
+@inproceedings{wei2026gsfix3d,
+  title={Gsfix3d: Diffusion-guided repair of novel views in gaussian splatting},
+  author={Wei, Jiaxin and Leutenegger, Stefan and Schaefer, Simon},
+  booktitle={2026 International Conference on 3D Vision (3DV)},
+  pages={1051--1060},
+  year={2026},
+  organization={IEEE}
 }
 ```
 
