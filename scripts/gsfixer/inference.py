@@ -70,7 +70,7 @@ if "__main__" == __name__:
         "--data_type",
         type=str,
         default="replica",
-        choices=["replica", "scannetpp"]
+        choices=["replica", "scannetpp", "colmap"]
     )
     parser.add_argument(
         "--data_path",
@@ -192,6 +192,8 @@ if "__main__" == __name__:
             with open(split_file, "r") as f:
                 splits = json.load(f)
             gt_rgb_file_paths = sorted([os.path.join(args.data_path, "undistorted_images_2", file_name) for file_name in splits["test"]])
+        elif args.data_type == "colmap":
+            gt_rgb_file_paths = []  # no predefined ground truth for custom data
         else:
             raise TypeError(f"Unsupported dataset type: {args.data_type}!")
 

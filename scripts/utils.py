@@ -129,6 +129,76 @@ def render_mesh(mesh, intrinsics, R_WC, t_WC):
     return color
 
 
+def read_colmap_cameras(path, intrinsics_only=False):
+    """Read cameras from COLMAP format (cameras.txt, images.txt)."""
+    cameras_file = os.path.join(path, "cameras.txt")
+    images_file = os.path.join(path, "images.txt")
+
+    # Read per-camera intrinsics
+    cam_params = {}
+    with open(cameras_file, 'r') as f:
+        for line in f:
+            if line.startswith('#') or not line.strip():
+                continue
+            parts = line.strip().split()
+            cam_id = int(parts[0])
+            model = parts[1]
+            width, height = int(parts[2]), int(parts[3])
+            if model == "SIMPLE_RADIAL" or model == "SIMPLE_PINHOLE":
+                fx = fy = float(parts[4])
+                cx, cy = float(parts[5]), float(parts[6])
+            elif model == "PINHOLE" or model == "OPENCV":
+                fx, fy = float(parts[4]), float(parts[5])
+                cx, cy = float(parts[6]), float(parts[7])
+            else:
+                fx = fy = float(parts[4])
+                cx, cy = float(parts[5]), float(parts[6])
+            cam_params[cam_id] = {"width": width, "height": height, "fx": fx, "fy": fy, "cx": cx, "cy": cy}
+
+    # Use the most common width/height; average intrinsics across all cameras
+    widths = [c["width"] for c in cam_params.values()]
+    heights = [c["height"] for c in cam_params.values()]
+    width = max(set(widths), key=widths.count)
+    height = max(set(heights), key=heights.count)
+    intrinsics = {
+        "width": width,
+        "height": height,
+        "fx": float(np.mean([c["fx"] for c in cam_params.values()])),
+        "fy": float(np.mean([c["fy"] for c in cam_params.values()])),
+        "cx": float(np.mean([c["cx"] for c in cam_params.values()])),
+        "cy": float(np.mean([c["cy"] for c in cam_params.values()])),
+    }
+
+    if intrinsics_only:
+        return intrinsics
+
+    # Read poses from images.txt (2 lines per image: pose + 2D points)
+    image_poses = {}
+    with open(images_file, 'r') as f:
+        lines = [l.strip() for l in f if not l.startswith('#') and l.strip()]
+
+    i = 0
+    while i < len(lines):
+        parts = lines[i].split()
+        if len(parts) >= 10:
+            qw, qx, qy, qz = float(parts[1]), float(parts[2]), float(parts[3]), float(parts[4])
+            tx, ty, tz = float(parts[5]), float(parts[6]), float(parts[7])
+            name = parts[9]
+            # COLMAP stores world-to-camera transform; convert to camera-to-world (T_WC)
+            R_cw = R.from_quat([qx, qy, qz, qw]).as_matrix()
+            t_cw = np.array([tx, ty, tz])
+            T_CW = np.eye(4)
+            T_CW[:3, :3] = R_cw
+            T_CW[:3, 3] = t_cw
+            image_poses[name] = np.linalg.inv(T_CW)
+        i += 2  # skip 2D-points line
+
+    sorted_names = sorted(image_poses.keys())
+    train_cameras = np.stack([image_poses[n] for n in sorted_names])
+
+    return train_cameras, None, intrinsics
+
+
 def read_replica_cameras(path, intrinsics_only=False):
     parent_path = os.path.dirname(path)
     intrinsics_path = os.path.join(parent_path, "cam_params.json")

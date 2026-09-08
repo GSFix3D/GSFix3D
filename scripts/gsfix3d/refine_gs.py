@@ -24,7 +24,7 @@ from gs.general_utils import searchForMaxIteration, focal2fov
 from gs.loss_utils import l1_loss, ssim
 from gs.arguments import ModelParams, OptimizationParams, PipelineParams, get_combined_args
 
-from scripts.utils import read_replica_cameras, read_scannetpp_cameras, eval_image
+from scripts.utils import read_replica_cameras, read_scannetpp_cameras, read_colmap_cameras, eval_image
 
 
 def main(args, model_params, optim_params, pipeline_params):
@@ -54,6 +54,15 @@ def main(args, model_params, optim_params, pipeline_params):
         train_rgb_file_paths = sorted([os.path.join(args.data_path, "undistorted_images_2", file_name) for file_name in splits["train"]])
         test_rgb_file_paths = sorted([os.path.join(args.data_path, "undistorted_images_2", file_name) for file_name in splits["test"]])
         train_camera_poses, test_camera_poses, intrinsics = read_scannetpp_cameras(args.data_path)
+    elif args.data_type == "colmap":
+        from glob import glob as _glob
+        train_rgb_file_paths = sorted(
+            _glob(os.path.join(args.data_path, "*.png")) +
+            _glob(os.path.join(args.data_path, "*.jpg"))
+        )
+        test_rgb_file_paths = []
+        train_camera_poses, _, intrinsics = read_colmap_cameras(args.data_path)
+        train_camera_poses = list(train_camera_poses)
     else:
         raise TypeError(f"Unsupported dataset type: {args.data_type}!")
 
@@ -140,7 +149,8 @@ def main(args, model_params, optim_params, pipeline_params):
             T_kf_inv = np.linalg.inv(T_kf)
             gs_cam_kf = Camera(R=T_kf_inv[:3, :3], T=T_kf_inv[:3, 3], FoVx=fov_x, FoVy=fov_y, width=intrinsics["width"], height=intrinsics["height"])
             
-            kf_img = Image.open(train_rgb_file_paths[kf_idx])
+            kf_img = Image.open(train_rgb_file_paths[kf_idx]).convert("RGB")
+            kf_img = kf_img.resize((intrinsics["width"], intrinsics["height"]), Image.BILINEAR)
             gt_image = to_tensor(kf_img)
             gt_image = gt_image.cuda()
 
@@ -189,7 +199,7 @@ if __name__ == "__main__":
     pipeline = PipelineParams(parser)
     
     parser.add_argument("--iteration", type=int, default=-1, help="A 3DGS model from this specific iteration will be loaded following Inria 3DGS file structure")
-    parser.add_argument("--data_type", type=str, default="replica", choices=["replica", "scannetpp"], help="Supported data type")
+    parser.add_argument("--data_type", type=str, default="replica", choices=["replica", "scannetpp", "colmap"], help="Supported data type")
     parser.add_argument("--data_path", type=str, help="Path to ground truth data")
     parser.add_argument("--sparse_kf_list", type=str, default="", help="A keyframe list to only select keyframes from ground truth data")
     parser.add_argument("--fixed_image_path", type=str, help="Path to fixed novel view images obtained from GSFixer")

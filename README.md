@@ -41,8 +41,27 @@ pip install -r requirements.txt
 Build differentiable Gaussian rasterizer
 ```
 cd diff-gaussian-rasterization
-pip install .
+pip install --no-build-isolation .
 ```
+
+> **Note for GCC 13 + CUDA 12.4+ users:** If you encounter compilation errors related to `cospi`/`sinpi` exception specification conflicts, patch the CUDA math header before building:
+> ```python
+> sudo python3 -c "
+> path = '/usr/local/cuda-12.6/include/crt/math_functions.h'
+> with open(path) as f: content = f.read()
+> content = content.replace('double                 sinpi(double x);', 'double                 sinpi(double x) noexcept;')
+> content = content.replace('float                  sinpif(float x);', 'float                  sinpif(float x) noexcept;')
+> content = content.replace('double                 cospi(double x);', 'double                 cospi(double x) noexcept;')
+> content = content.replace('float                  cospif(float x);', 'float                  cospif(float x) noexcept;')
+> with open(path, 'w') as f: f.write(content)
+> "
+> ```
+> Adjust the path to match your CUDA version (e.g. `/usr/local/cuda-12.1/...`).
+
+> **Note on package versions:** If you encounter import errors with `diffusers`, pin to a compatible version:
+> ```
+> pip install "diffusers==0.32.2" "transformers==4.44.2"
+> ```
 
 ## Usage
 ### Training from scratch
@@ -164,7 +183,65 @@ Please refer to [here](https://github.com/GS-Fusion/GSFusion_eval#file-structure
 
 </details>
 
-## Testing on your own data
+## Testing on your own data (COLMAP format)
+
+If your data comes from COLMAP reconstruction (e.g. from RealityScan, Metashape, or similar), use the dedicated COLMAP pipeline which bypasses the interactive mesh viewer.
+
+**Supported input:** A folder containing `cameras.txt`, `images.txt`, `points3D.txt`, and the original images, plus a 3DGS model trained on that data.
+
+### Step 1 — Prepare the 3DGS model directory
+
+GSFix3D expects the Inria 3DGS format. If your model is a single `.ply` file (e.g. from PostShot), create the expected structure:
+```bash
+mkdir -p <gs_model_path>/point_cloud/iteration_<N>
+ln -s /path/to/your/splat.ply <gs_model_path>/point_cloud/iteration_<N>/point_cloud.ply
+```
+
+Also create a minimal `cfg_args` file in `<gs_model_path>`:
+```
+Namespace(sh_degree=3, source_path='', model_path='<gs_model_path>', images='images', resolution=-1, white_background=False, data_device='cuda', eval=False)
+```
+
+### Step 2 — Select and render novel views
+
+Use the COLMAP-aware script to sample existing camera poses and render GS images (no mesh or display required):
+```bash
+python scripts/gsfix3d/colmap_to_novel_views.py \
+  -m <gs_model_path> \
+  --data_path <colmap_data_path> \
+  --output_dir <output_path>/novel_views \
+  --stride 10
+```
+`--stride 10` uses every 10th camera. Adjust to control the number of views. Use `--max_views N` to cap the total.
+
+### Step 3 — Run GSFixer inference
+
+```bash
+python scripts/gsfixer/inference.py \
+  --checkpoint <gsfixer_checkpoint_path> \
+  --data_type colmap \
+  --data_path <output_path>/novel_views \
+  --recon_method_type custom \
+  --output_dir <output_path>/gsfixer_output
+```
+
+Note: use `gsfixer-base` (GS-only, single input) unless you have rendered mesh images, in which case use `gsfixer-full` with `--dual_input`.
+
+### Step 4 — Lift fixed views back into 3DGS
+
+```bash
+python scripts/gsfix3d/refine_gs.py \
+  -m <gs_model_path> \
+  --data_type colmap \
+  --data_path <colmap_data_path> \
+  --fixed_image_path <output_path>/gsfixer_output/rgb \
+  --novel_views <output_path>/novel_views/novel_views.json \
+  --output_dir <output_path>/gsfix3d_output
+```
+
+The refined model is saved as `<output_path>/gsfix3d_output/point_cloud.ply`.
+
+## Testing on your own data (interactive, with mesh)
 
 Prepare the novel views that you want to repair using our provided script
 ```

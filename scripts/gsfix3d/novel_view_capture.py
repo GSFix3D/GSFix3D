@@ -20,7 +20,7 @@ from gs.gaussian_renderer import render
 from gs.general_utils import searchForMaxIteration, focal2fov
 from gs.arguments import ModelParams, PipelineParams, get_combined_args
 
-from scripts.utils import read_replica_cameras, read_scannetpp_cameras, render_mesh
+from scripts.utils import read_replica_cameras, read_scannetpp_cameras, read_colmap_cameras, render_mesh
 
 
 def save_camera_poses(vis):
@@ -64,6 +64,8 @@ def main(args, model_params, pipeline_params):
         intrinsics = read_replica_cameras(args.data_path, intrinsics_only=True)
     elif args.data_type == "scannetpp":
         intrinsics = read_scannetpp_cameras(args.data_path, intrinsics_only=True)
+    elif args.data_type == "colmap":
+        intrinsics = read_colmap_cameras(args.data_path, intrinsics_only=True)
     else:
         raise TypeError(f"Unsupported dataset type: {args.data_type}!")
 
@@ -72,13 +74,19 @@ def main(args, model_params, pipeline_params):
     )
 
     mesh_file = os.path.join(model_params.model_path, "mesh", "mesh_" + str(loaded_iter) + ".ply")
-    if not os.path.exists(mesh_file):
-        raise FileNotFoundError(f"{mesh_file} doesn't exist!")
-    mesh = o3d.io.read_triangle_mesh(mesh_file)
+    mesh = None
+    if os.path.exists(mesh_file):
+        mesh = o3d.io.read_triangle_mesh(mesh_file)
+        geometry = mesh
+    else:
+        print(f"No mesh found at {mesh_file}, using Gaussian point cloud for visualization.")
+        ply_path = os.path.join(model_params.model_path, "point_cloud", "iteration_" + str(loaded_iter), "point_cloud.ply")
+        pcd = o3d.io.read_point_cloud(ply_path)
+        geometry = pcd
 
     vis = o3d.visualization.VisualizerWithKeyCallback()
     vis.create_window(width=intrinsics["width"], height=intrinsics["height"])
-    vis.add_geometry(mesh)
+    vis.add_geometry(geometry)
     vis.register_key_callback(ord("R"), R_key_callback)
     vis.register_key_callback(ord("Q"), Q_key_callback)
 
@@ -115,7 +123,7 @@ def main(args, model_params, pipeline_params):
         T_WC = np.linalg.inv(T_CW)
         
         # Render mesh
-        if render_mesh:
+        if args.render_mesh and mesh is not None:
             rgb = render_mesh(mesh, intrinsics, T_WC[:3, :3], T_WC[:3, 3])
             rgb = rgb.astype(np.uint8)
             save_path = os.path.join(sub_dir, "mesh_image", f"{i:05d}.png")
@@ -138,7 +146,7 @@ if __name__ == "__main__":
     pipeline = PipelineParams(parser)
 
     parser.add_argument("--iteration", type=int, default=-1, help="A 3DGS model from this specific iteration will be loaded following Inria 3DGS file structure")
-    parser.add_argument("--data_type", type=str, default="replica", choices=["replica", "scannetpp"], help="Supported data type")
+    parser.add_argument("--data_type", type=str, default="replica", choices=["replica", "scannetpp", "colmap"], help="Supported data type")
     parser.add_argument("--data_path", type=str, help="Path to your customized data")
     parser.add_argument("--render_mesh", action="store_true", help="Enable mesh image rendering")
     parser.add_argument("--output_dir", type=str, default="output_novel_views", help="Folder path to store results")
@@ -147,7 +155,7 @@ if __name__ == "__main__":
     os.makedirs(args.output_dir, exist_ok=True)
     sub_dir = os.path.join(args.output_dir, "rendered_novel_views")
     os.makedirs(os.path.join(sub_dir, "gs_image"), exist_ok=True)
-    if render_mesh:
+    if args.render_mesh:
         os.makedirs(os.path.join(sub_dir, "mesh_image"), exist_ok=True)
 
     POSES_FILE = os.path.join(args.output_dir, "novel_views.json")
